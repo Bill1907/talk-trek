@@ -1,8 +1,11 @@
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { View, StyleSheet, Button } from 'react-native';
 import { Audio } from 'expo-av';
 
+import { WebSocketService } from "@/services/apiService";
+
 export default function AudioComponent() {
+    let wss: WebSocketService;
     const [recording, setRecording] = useState<any>();
     const [permissionResponse, requestPermission] = Audio.usePermissions();
 
@@ -38,6 +41,15 @@ export default function AudioComponent() {
         const uri = recording.getURI();
         console.log('Recording stopped and stored at', uri);
     }
+
+    useEffect(() => {
+        wss = new WebSocketService();
+        wss.open(() => console.log('Connection opened'));
+        wss.onerror(() => console.log('Error occurred'));
+        return () => {
+            wss.close();
+        }
+    });
 
     return (
         <View style={styles.container}>
