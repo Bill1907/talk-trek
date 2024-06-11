@@ -1,12 +1,17 @@
 import {useEffect, useState} from "react";
 import { View, StyleSheet, Button } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util'
 import { Audio } from 'expo-av';
 
-import { WebSocketService } from "@/services/apiService";
+// import { WebSocketService } from "@/services/apiService";
+import { OpenAiService } from "@/services/openai";
+import {Sound} from "expo-av/build/Audio/Sound";
 
 export default function AudioComponent() {
-    let wss: WebSocketService;
+    // let wss: WebSocketService;
+    let client: OpenAiService | null;
     const [recording, setRecording] = useState<any>();
+    const [sound, setSound] = useState<Sound>();
     const [permissionResponse, requestPermission] = Audio.usePermissions();
 
     async function startRecording() {
@@ -42,22 +47,53 @@ export default function AudioComponent() {
         console.log('Recording stopped and stored at', uri);
     }
 
+    async function playTTS() {
+        try {
+            if (!client) {
+                console.error('OpenAI client not initialized');
+                return;
+            }
+            const mp3 = await client.createTTS('Hello, how are you doing today?');
+            if (!mp3 || !mp3._bodyBlob) {
+                throw new Error('Failed to receive TTS data');
+            }
+
+            const { sound } = await Audio.Sound.createAsync({ uri:  });
+            setSound(sound);
+            await sound.playAsync();
+        } catch (error) {
+            console.error('Error playing TTS:', error);
+        }
+    }
+
+    // useEffect(() => {
+    //     wss = new WebSocketService();
+    //     wss.open(() => console.log('Connection opened'));
+    //     wss.onerror(() => console.log('Error occurred'));
+    //     return () => {
+    //         wss.close();
+    //     }
+    // });
+
     useEffect(() => {
-        wss = new WebSocketService();
-        wss.open(() => console.log('Connection opened'));
-        wss.onerror(() => console.log('Error occurred'));
+        client = new OpenAiService(process.env.EXPO_PUBLIC_OPENAI_API_KEY!);
         return () => {
-            wss.close();
+            client = null;
         }
     });
 
     return (
+        <>
         <View style={styles.container}>
             <Button
                 title={recording ? 'Stop Recording' : 'Start Recording'}
                 onPress={recording ? stopRecording : startRecording}
             />
         </View>
+        <View style={styles.container}>
+            <Button title="Play Sound" onPress={playTTS} />
+        </View>
+        </>
     );
 }
 
